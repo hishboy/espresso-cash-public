@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 import 'package:injectable/injectable.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 
 import '../../../../core/cancelable_job.dart';
 import '../../../../core/transactions/tx_sender.dart';
@@ -31,7 +32,7 @@ class TxSentWatcher extends PaymentWatcher {
 }
 
 class _ISKPTxSentJob extends CancelableJob<IncomingSplitKeyPayment> {
-  _ISKPTxSentJob(this.payment, this.sender);
+  const _ISKPTxSentJob(this.payment, this.sender);
 
   final IncomingSplitKeyPayment payment;
   final TxSender sender;
@@ -50,13 +51,13 @@ class _ISKPTxSentJob extends CancelableJob<IncomingSplitKeyPayment> {
       failure: (_) => const ISKPStatus.txFailure(
         reason: TxFailureReason.escrowFailure,
       ),
-      networkError: (_) => null,
+      networkError: (_) {
+        Sentry.addBreadcrumb(Breadcrumb(message: 'Network error'));
+
+        return null;
+      },
     );
 
-    if (newStatus == null) {
-      return null;
-    }
-
-    return payment.copyWith(status: newStatus);
+    return newStatus == null ? null : payment.copyWith(status: newStatus);
   }
 }

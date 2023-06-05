@@ -9,6 +9,7 @@ import 'package:solana/base58.dart';
 import 'package:solana/encoder.dart';
 
 import '../../../../core/amount.dart';
+import '../../../../core/api_version.dart';
 import '../../../../core/currency.dart';
 import '../../../../core/escrow_private_key.dart';
 import '../../../../core/tokens/token_list.dart';
@@ -19,7 +20,7 @@ import '../../models/outgoing_split_key_payment.dart';
 
 @injectable
 class OSKPRepository {
-  OSKPRepository(this._db, this._tokens);
+  const OSKPRepository(this._db, this._tokens);
 
   final MyDatabase _db;
   final TokenList _tokens;
@@ -120,6 +121,8 @@ class OSKPRepository {
 }
 
 class OSKPRows extends Table with AmountMixin, EntityMixin {
+  const OSKPRows();
+
   IntColumn get status => intEnum<OSKPStatusDto>()();
 
   // Status fields
@@ -136,6 +139,8 @@ class OSKPRows extends Table with AmountMixin, EntityMixin {
   DateTimeColumn get generatedLinksAt => dateTime().nullable()();
   DateTimeColumn get resolvedAt => dateTime().nullable()();
   TextColumn get slot => text().nullable()();
+  IntColumn get apiVersion =>
+      intEnum<OskpApiVersionDto>().withDefault(const Constant(0))();
 }
 
 enum OSKPStatusDto {
@@ -168,7 +173,13 @@ extension OSKPRowExt on OSKPRow {
         ),
         status: await status.toOSKPStatus(this),
         linksGeneratedAt: generatedLinksAt,
+        apiVersion: apiVersion.toModel(),
       );
+}
+
+enum OskpApiVersionDto {
+  manual,
+  smartContract,
 }
 
 extension on OSKPStatusDto {
@@ -186,18 +197,21 @@ extension on OSKPStatusDto {
     final slot = row.slot?.let(BigInt.tryParse);
 
     switch (this) {
+      case OSKPStatusDto.txSendFailure:
       case OSKPStatusDto.txCreated:
         return OSKPStatus.txCreated(
           tx!,
           escrow: escrow!,
           slot: slot ?? BigInt.zero,
         );
+      case OSKPStatusDto.txWaitFailure:
       case OSKPStatusDto.txSent:
         return OSKPStatus.txSent(
           tx ?? StubSignedTx(txId!),
           escrow: escrow!,
           slot: slot ?? BigInt.zero,
         );
+      case OSKPStatusDto.txLinksFailure:
       case OSKPStatusDto.txConfirmed:
         return OSKPStatus.txConfirmed(escrow: escrow!);
       case OSKPStatusDto.linksReady:
@@ -219,27 +233,14 @@ extension on OSKPStatusDto {
             txId: withdrawTxId,
             timestamp: resolvedAt,
           );
-        } else {
-          return OSKPStatus.canceled(txId: cancelTxId, timestamp: resolvedAt);
         }
+
+        return OSKPStatus.canceled(txId: cancelTxId, timestamp: resolvedAt);
       case OSKPStatusDto.txFailure:
         return OSKPStatus.txFailure(
           reason: row.txFailureReason ?? TxFailureReason.unknown,
         );
-      case OSKPStatusDto.txSendFailure:
-        return OSKPStatus.txCreated(
-          tx!,
-          escrow: escrow!,
-          slot: slot ?? BigInt.zero,
-        );
-      case OSKPStatusDto.txWaitFailure:
-        return OSKPStatus.txSent(
-          tx ?? StubSignedTx(txId!),
-          escrow: escrow!,
-          slot: slot ?? BigInt.zero,
-        );
-      case OSKPStatusDto.txLinksFailure:
-        return OSKPStatus.txConfirmed(escrow: escrow!);
+      case OSKPStatusDto.cancelTxSendFailure:
       case OSKPStatusDto.cancelTxCreated:
         return OSKPStatus.cancelTxCreated(
           cancelTx!,
@@ -251,19 +252,8 @@ extension on OSKPStatusDto {
           escrow: escrow!,
           reason: row.txFailureReason ?? TxFailureReason.unknown,
         );
-      case OSKPStatusDto.cancelTxSent:
-        return OSKPStatus.cancelTxSent(
-          cancelTx!,
-          escrow: escrow!,
-          slot: slot ?? BigInt.zero,
-        );
-      case OSKPStatusDto.cancelTxSendFailure:
-        return OSKPStatus.cancelTxCreated(
-          cancelTx!,
-          escrow: escrow!,
-          slot: slot ?? BigInt.zero,
-        );
       case OSKPStatusDto.cancelTxWaitFailure:
+      case OSKPStatusDto.cancelTxSent:
         return OSKPStatus.cancelTxSent(
           cancelTx!,
           escrow: escrow!,
@@ -293,6 +283,7 @@ extension on OutgoingSplitKeyPayment {
         slot: status.toSlot()?.toString(),
         generatedLinksAt: linksGeneratedAt,
         resolvedAt: status.toResolvedAt(),
+        apiVersion: apiVersion.toDto(),
       );
 }
 
@@ -374,4 +365,26 @@ extension on OSKPStatus {
         cancelTxCreated: (it) => it.slot,
         cancelTxSent: (it) => it.slot,
       );
+}
+
+extension on SplitKeyApiVersion {
+  OskpApiVersionDto toDto() {
+    switch (this) {
+      case SplitKeyApiVersion.manual:
+        return OskpApiVersionDto.manual;
+      case SplitKeyApiVersion.smartContract:
+        return OskpApiVersionDto.smartContract;
+    }
+  }
+}
+
+extension on OskpApiVersionDto {
+  SplitKeyApiVersion toModel() {
+    switch (this) {
+      case OskpApiVersionDto.manual:
+        return SplitKeyApiVersion.manual;
+      case OskpApiVersionDto.smartContract:
+        return SplitKeyApiVersion.smartContract;
+    }
+  }
 }

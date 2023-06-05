@@ -1,3 +1,5 @@
+// ignore_for_file: cast_nullable_to_non_nullable
+
 import 'dart:math';
 
 import 'package:solana/solana.dart';
@@ -58,6 +60,57 @@ void main() {
       });
     },
   );
+
+  test(
+    'Can copy a key pair data if bytes are not destroyed',
+    () async {
+      final randomKeyPair = await Ed25519HDKeyPair.random();
+      final simpleKeyPairData = await randomKeyPair.extract();
+      final testKeyPair = simpleKeyPairData.copy();
+
+      expect(randomKeyPair.publicKey, equals(testKeyPair.publicKey));
+    },
+  );
+
+  test(
+    'Cannot copy a key pair data if bytes are destroyed',
+    () async {
+      final randomKeyPair = await Ed25519HDKeyPair.random();
+      final simpleKeyPairData = await randomKeyPair.extract();
+      simpleKeyPairData.destroy();
+
+      expect(simpleKeyPairData.copy, throwsA(isA<StateError>()));
+    },
+  );
+
+  test(
+    'Cannot extract a key pair data if bytes are destroyed',
+    () async {
+      final randomKeyPair = await Ed25519HDKeyPair.random();
+      final simpleKeyPairData = await randomKeyPair.extract();
+      simpleKeyPairData.destroy();
+
+      expect(simpleKeyPairData.extract, throwsA(isA<StateError>()));
+    },
+  );
+
+  group('getHDPath', () {
+    test('returns correct path with account and change', () {
+      expect(Ed25519HDKeyPair.getHDPath(1, 2), equals("m/44'/501'/1'/2'"));
+    });
+
+    test('returns correct path with only account', () {
+      expect(Ed25519HDKeyPair.getHDPath(1, null), equals("m/44'/501'/1'"));
+    });
+
+    test('returns correct path with only change', () {
+      expect(Ed25519HDKeyPair.getHDPath(null, 2), equals("m/44'/501'/0'/2'"));
+    });
+
+    test('returns correct path with no account or change', () {
+      expect(Ed25519HDKeyPair.getHDPath(null, null), equals("m/44'/501'"));
+    });
+  });
 }
 
 const _mnemonic =

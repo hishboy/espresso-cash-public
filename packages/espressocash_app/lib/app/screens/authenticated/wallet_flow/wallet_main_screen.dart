@@ -2,12 +2,14 @@ import 'package:decimal/decimal.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/amount.dart';
+import '../../../../core/tokens/token.dart';
 import '../../../../gen/assets.gen.dart';
 import '../../../../l10n/device_locale.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../../ui/amount_keypad/amount_keypad.dart';
 import '../../../../ui/amount_with_equivalent.dart';
 import '../../../../ui/button.dart';
+import '../../../../ui/icon_button.dart';
 import '../../../../ui/number_formatter.dart';
 import '../../../../ui/tab_bar.dart';
 import '../../../../ui/usdc_info.dart';
@@ -20,6 +22,7 @@ class WalletMainScreen extends StatefulWidget {
     required this.onRequest,
     required this.onPay,
     required this.amount,
+    required this.token,
     this.shakeKey,
     this.error = '',
   });
@@ -28,7 +31,8 @@ class WalletMainScreen extends StatefulWidget {
   final VoidCallback onRequest;
   final VoidCallback onPay;
   final ValueSetter<Decimal> onAmountChanged;
-  final CryptoAmount amount;
+  final FiatAmount amount;
+  final Token token;
   final Key? shakeKey;
   final String error;
 
@@ -38,6 +42,7 @@ class WalletMainScreen extends StatefulWidget {
 
 class _ScreenState extends State<WalletMainScreen> {
   late final TextEditingController _amountController;
+  // ignore: dispose-fields, it's not created in this class
   TabController? _tabController;
 
   WalletOperation _action = WalletOperation.pay;
@@ -51,7 +56,9 @@ class _ScreenState extends State<WalletMainScreen> {
 
   @override
   void dispose() {
-    _amountController.removeListener(_updateValue);
+    _amountController
+      ..removeListener(_updateValue)
+      ..dispose();
     _tabController?.removeListener(_handleTabUpdate);
     super.dispose();
   }
@@ -104,7 +111,7 @@ class _ScreenState extends State<WalletMainScreen> {
             const SizedBox(height: 24),
             AmountWithEquivalent(
               inputController: _amountController,
-              token: widget.amount.cryptoCurrency.token,
+              token: widget.token,
               collapsed: false,
               shakeKey: widget.shakeKey,
               error: widget.error,
@@ -150,10 +157,7 @@ class _ScreenState extends State<WalletMainScreen> {
 }
 
 class _QrScannerAppBar extends StatelessWidget implements PreferredSizeWidget {
-  const _QrScannerAppBar({
-    Key? key,
-    required this.onQrScanner,
-  }) : super(key: key);
+  const _QrScannerAppBar({required this.onQrScanner});
 
   final VoidCallback onQrScanner;
 
@@ -170,11 +174,11 @@ class _QrScannerAppBar extends StatelessWidget implements PreferredSizeWidget {
               children: [
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: IconButton(
+                  child: CpIconButton(
                     onPressed: onQrScanner,
-                    icon: Assets.icons.qrScanner.svg(height: 26),
-                    padding: EdgeInsets.zero,
-                    alignment: Alignment.centerLeft,
+                    icon: Assets.icons.qrScanner.svg(color: Colors.white),
+                    variant: CpIconButtonVariant.black,
+                    size: CpIconButtonSize.big,
                   ),
                 ),
                 Align(

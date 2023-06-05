@@ -1,7 +1,7 @@
 part of 'profile_section.dart';
 
 class VersionSection extends StatefulWidget {
-  const VersionSection({Key? key}) : super(key: key);
+  const VersionSection({super.key});
 
   @override
   State<VersionSection> createState() => _VersionSectionState();
@@ -16,7 +16,7 @@ class _VersionSectionState extends State<VersionSection> {
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Copied FID: $id')),
+      SnackBar(content: Text(context.l10n.copiedFid(id))),
     );
   }
 
@@ -35,7 +35,7 @@ class _VersionSectionState extends State<VersionSection> {
                     child: GestureDetector(
                       onLongPress: _copyFID,
                       child: Text(
-                        'Version $version ($buildNumber)',
+                        context.l10n.version(version, buildNumber ?? ''),
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w500,

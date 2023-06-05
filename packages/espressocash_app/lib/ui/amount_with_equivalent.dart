@@ -1,6 +1,12 @@
+import 'package:dfunc/dfunc.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../core/amount.dart';
+import '../core/conversion_rates/amount_ext.dart';
+import '../core/conversion_rates/bl/repository.dart';
 import '../core/currency.dart';
+import '../core/presentation/format_amount.dart';
 import '../core/tokens/token.dart';
 import '../l10n/decimal_separator.dart';
 import '../l10n/device_locale.dart';
@@ -12,13 +18,13 @@ import 'shake.dart';
 
 class AmountWithEquivalent extends StatelessWidget {
   const AmountWithEquivalent({
-    Key? key,
+    super.key,
     required this.inputController,
-    required this.token,
     required this.collapsed,
+    required this.token,
     this.shakeKey,
     this.error = '',
-  }) : super(key: key);
+  });
 
   final TextEditingController inputController;
   final Token token;
@@ -65,11 +71,10 @@ class AmountWithEquivalent extends StatelessWidget {
 
 class _EquivalentDisplay extends StatelessWidget {
   const _EquivalentDisplay({
-    Key? key,
     required this.input,
     required this.token,
     this.backgroundColor,
-  }) : super(key: key);
+  });
 
   final String input;
   final Token token;
@@ -79,14 +84,34 @@ class _EquivalentDisplay extends StatelessWidget {
   Widget build(BuildContext context) {
     final locale = DeviceLocale.localeOf(context);
     final value = input.toDecimalOrZero(locale);
-    final symbol = token.symbol;
     final shouldDisplay = value.toDouble() != 0;
-    final amount = shouldDisplay ? input : '0';
-    final formatted = context.l10n.tokenEquivalent(amount, symbol);
+
+    final String formattedAmount;
+    if (shouldDisplay) {
+      formattedAmount = Amount.fromDecimal(value: value, currency: Currency.usd)
+          .let((it) => it as FiatAmount)
+          .let(
+            (it) => it.toTokenAmount(
+              token,
+              ratesRepository: context.read<ConversionRatesRepository>(),
+            ),
+          )
+          .maybeFlatMap(
+            (it) => it.format(
+              locale,
+              roundInteger: true,
+              skipSymbol: true,
+              maxDecimals: Currency.usd.decimals,
+            ),
+          )
+          .ifNull(() => '0');
+    } else {
+      formattedAmount = '0';
+    }
 
     return _DisplayChip(
       shouldDisplay: shouldDisplay,
-      value: formatted,
+      value: context.l10n.tokenEquivalent(formattedAmount, token.symbol),
       backgroundColor: backgroundColor,
     );
   }
@@ -129,10 +154,9 @@ class _DisplayChip extends StatelessWidget {
 
 class _InputDisplay extends StatelessWidget {
   const _InputDisplay({
-    Key? key,
     required this.input,
     required this.fontSize,
-  }) : super(key: key);
+  });
 
   final String input;
   final double fontSize;

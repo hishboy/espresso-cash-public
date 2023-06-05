@@ -17,15 +17,16 @@ import '../../../../ui/dialogs.dart';
 import '../../../../ui/number_formatter.dart';
 import '../../../../ui/theme.dart';
 
+@RoutePage<Decimal>()
 class ODPConfirmationScreen extends StatefulWidget {
   const ODPConfirmationScreen({
-    Key? key,
+    super.key,
     required this.initialAmount,
     required this.recipient,
     required this.label,
     required this.token,
     this.isEnabled = true,
-  }) : super(key: key);
+  });
 
   final String initialAmount;
   final Ed25519HDPublicKey recipient;
@@ -61,6 +62,12 @@ class _ScreenState extends State<ODPConfirmationScreen> {
   }
 
   @override
+  void dispose() {
+    _amountController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
     final address = widget.recipient.toBase58();
@@ -90,7 +97,7 @@ class _ScreenState extends State<ODPConfirmationScreen> {
             AmountWithEquivalent(
               inputController: _amountController,
               token: widget.token,
-              collapsed: true,
+              collapsed: widget.isEnabled,
             ),
             const SizedBox(height: 16),
             Expanded(

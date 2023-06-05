@@ -23,11 +23,11 @@ class InvestmentHeader extends StatelessWidget {
   const InvestmentHeader({super.key});
 
   @override
-  Widget build(BuildContext context) => DecoratedBox(
-        decoration: const BoxDecoration(color: CpColors.darkBackground),
+  Widget build(BuildContext context) => const DecoratedBox(
+        decoration: BoxDecoration(color: CpColors.darkBackground),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: const [
+          children: [
             _Balance(),
             _Buttons(),
           ],
@@ -36,66 +36,65 @@ class InvestmentHeader extends StatelessWidget {
 }
 
 class _Buttons extends StatelessWidget {
-  const _Buttons({Key? key}) : super(key: key);
+  const _Buttons();
 
   @override
   Widget build(BuildContext context) {
     final isZeroAmount = context.watchUsdcBalance().isZero;
 
-    if (isZeroAmount) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: const [AddCashButton()],
-        ),
-      );
-    }
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Divider(color: CpColors.darkDividerColor),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-          child: Text(
-            context.l10n.investmentHeaderButtonsTitle,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w500,
-              fontSize: 20,
+    return isZeroAmount
+        ? const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [AddCashButton()],
             ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-          child: Row(
+          )
+        : Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Flexible(
-                child: CpButton(
-                  minWidth: 250,
-                  size: CpButtonSize.wide,
-                  text: context.l10n.sendMoney,
-                  onPressed: () =>
-                      context.router.navigate(const WalletFlowRoute()),
+              const Divider(color: CpColors.darkDividerColor),
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                child: Text(
+                  context.l10n.investmentHeaderButtonsTitle,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w500,
+                    fontSize: 20,
+                  ),
                 ),
               ),
-              const SizedBox(width: 8),
-              const AddCashButton(size: CpButtonSize.wide),
-              const SizedBox(width: 8),
-              const CashOutButton(size: CpButtonSize.wide),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                child: Row(
+                  children: [
+                    Flexible(
+                      child: CpButton(
+                        minWidth: 250,
+                        size: CpButtonSize.wide,
+                        text: context.l10n.sendMoney,
+                        onPressed: () =>
+                            context.router.navigate(const WalletFlowRoute()),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const AddCashButton(size: CpButtonSize.wide),
+                    const SizedBox(width: 8),
+                    const CashOutButton(size: CpButtonSize.wide),
+                  ],
+                ),
+              )
             ],
-          ),
-        )
-      ],
-    );
+          );
   }
 }
 
 class _Balance extends StatefulWidget {
-  const _Balance({Key? key}) : super(key: key);
+  const _Balance();
 
   @override
   State<_Balance> createState() => _BalanceState();
@@ -107,33 +106,26 @@ class _BalanceState extends State<_Balance> {
   void _toggleInfo() => setState(() => _showMore = !_showMore);
 
   @override
-  Widget build(BuildContext context) => SizedBox(
-        height: 140,
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 200),
-          child: _showMore
-              ? _Info(onClose: _toggleInfo)
-              : Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _Headline(onInfo: _toggleInfo),
-                      const Spacer(),
-                      const _Amount(),
-                    ],
-                  ),
-                ),
+  Widget build(BuildContext context) => _HeaderSwitcher(
+        first: Padding(
+          padding: const EdgeInsets.only(left: 24, top: 16, right: 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _Headline(onInfo: _toggleInfo),
+              const SizedBox(height: 8),
+              const _Amount(),
+            ],
+          ),
         ),
+        second: _Info(onClose: _toggleInfo),
+        showMore: _showMore,
       );
 }
 
 class _Info extends StatelessWidget {
-  const _Info({
-    Key? key,
-    required this.onClose,
-  }) : super(key: key);
+  const _Info({required this.onClose});
 
   final VoidCallback onClose;
 
@@ -161,7 +153,7 @@ class _Info extends StatelessWidget {
 }
 
 class _Amount extends StatelessWidget {
-  const _Amount({Key? key}) : super(key: key);
+  const _Amount();
 
   @override
   Widget build(BuildContext context) {
@@ -208,10 +200,7 @@ class _Amount extends StatelessWidget {
 }
 
 class _Headline extends StatelessWidget {
-  const _Headline({
-    Key? key,
-    required this.onInfo,
-  }) : super(key: key);
+  const _Headline({required this.onInfo});
 
   final VoidCallback onInfo;
 
@@ -267,4 +256,55 @@ extension on Amount {
 extension on BuildContext {
   Amount watchUsdcBalance() => watchUserFiatBalance(Token.usdc)
       .ifNull(() => Amount.zero(currency: Currency.usd));
+}
+
+class _HeaderSwitcher extends StatefulWidget {
+  const _HeaderSwitcher({
+    required this.first,
+    required this.second,
+    required this.showMore,
+  });
+
+  final Widget first;
+  final Widget second;
+  final bool showMore;
+
+  @override
+  State<_HeaderSwitcher> createState() => _HeaderSwitcherState();
+}
+
+class _HeaderSwitcherState extends State<_HeaderSwitcher> {
+  double? _firstChildHeight;
+
+  @override
+  void didUpdateWidget(covariant _HeaderSwitcher oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _firstChildHeight = null;
+  }
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+        builder: (BuildContext context, BoxConstraints constraints) {
+          if (_firstChildHeight == null) {
+            WidgetsBinding.instance.addPostFrameCallback((_) async {
+              setState(() {
+                _firstChildHeight = context.size?.height;
+              });
+            });
+          }
+
+          return AnimatedSwitcher(
+            duration: const Duration(milliseconds: 100),
+            switchInCurve: Curves.easeInOut,
+            switchOutCurve: Curves.easeInOut,
+            child: !widget.showMore
+                ? widget.first
+                : SizedBox(
+                    key: const ValueKey('second'),
+                    height: _firstChildHeight,
+                    child: widget.second,
+                  ),
+          );
+        },
+      );
 }

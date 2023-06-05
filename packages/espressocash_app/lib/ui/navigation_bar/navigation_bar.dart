@@ -5,15 +5,16 @@ import 'navigation_button.dart';
 
 class CPNavigationBar extends StatelessWidget {
   const CPNavigationBar({
-    Key? key,
+    super.key,
     required this.items,
-  }) : super(key: key);
+  });
 
   final List<CpNavigationButton> items;
 
   @override
   Widget build(BuildContext context) => Container(
         // prevents from clicking below the navigation bar
+        padding: const EdgeInsets.only(bottom: 8),
         color: Colors.transparent,
         child: SafeArea(
           minimum: const EdgeInsets.only(

@@ -1,4 +1,4 @@
-import 'package:auto_route/auto_route.dart';
+import 'package:auto_route/annotations.dart';
 import 'package:decimal/decimal.dart';
 import 'package:dfunc/dfunc.dart';
 import 'package:flutter/material.dart';
@@ -19,9 +19,8 @@ import '../../../ui/content_padding.dart';
 import '../../../ui/loader.dart';
 import '../../../ui/navigation_bar/navigation_bar.dart';
 import '../../../ui/theme.dart';
-import '../../../ui/token_icon.dart';
-import '../../favorite_tokens/widgets/favorite_button.dart';
 import '../../ramp/widgets/ramp_buttons.dart';
+import '../../swap/token_ext.dart';
 import '../../token_chart/module.dart';
 import '../../token_chart/widgets/token_chart.dart';
 import '../../token_chart/widgets/token_overview.dart';
@@ -29,8 +28,10 @@ import '../src/token_details.dart';
 import '../src/token_details_bloc.dart';
 import '../src/widgets/balance_widget.dart';
 import '../src/widgets/exchange_buttons.dart';
+import '../src/widgets/token_app_bar.dart';
 import '../src/widgets/token_details_widget.dart';
 
+@RoutePage()
 class TokenDetailsScreen extends StatelessWidget {
   const TokenDetailsScreen({super.key, required this.token});
 
@@ -54,63 +55,33 @@ class TokenDetailsScreen extends StatelessWidget {
               bottom: false,
               child: Padding(
                 padding: const EdgeInsets.only(bottom: cpNavigationBarheight),
-                child: SingleChildScrollView(
-                  physics: const ClampingScrollPhysics(),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _Header(token: token),
-                      const SizedBox(height: 4),
-                      Text(
-                        token.name,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 26,
-                        ),
+                child: NestedScrollView(
+                  headerSliverBuilder: (context, _) => [
+                    TokenAppBar(token: token),
+                  ],
+                  body: _NoGlowList(
+                    child: SingleChildScrollView(
+                      physics: const ClampingScrollPhysics(),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          _Chart(token: token),
+                          if (token.shouldShowExchangeButtons)
+                            ExchangeButtons(token: token),
+                          if (token == Token.usdc) const _RampButtons(),
+                          _Balance(token: token),
+                          _Content(token: token),
+                          SizedBox(
+                            height: MediaQuery.of(context).padding.bottom -
+                                cpNavigationBarheight,
+                          )
+                        ],
                       ),
-                      const SizedBox(height: 4),
-                      _Chart(token: token),
-                      if (token.canBeSwapped) ExchangeButtons(token: token),
-                      if (token == Token.usdc) const _RampButtons(),
-                      _Balance(token: token),
-                      _Content(token: token),
-                    ],
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-        ),
-      );
-}
-
-class _Header extends StatelessWidget {
-  const _Header({required this.token});
-
-  final Token token;
-
-  static const double _tokenSize = 68;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: SizedBox(
-          height: _tokenSize,
-          child: Stack(
-            children: [
-              Align(
-                alignment: Alignment.center,
-                child: CpTokenIcon(token: token, size: _tokenSize),
-              ),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: BackButton(onPressed: () => context.router.pop()),
-              ),
-              Align(
-                alignment: Alignment.centerRight,
-                child: FavoriteButton(token: token),
-              ),
-            ],
           ),
         ),
       );
@@ -162,11 +133,7 @@ class _Content extends StatelessWidget {
             initial: () => loader,
             processing: () => loader,
             failure: (_) => TokenDetailsWidget(
-              data: TokenDetails(
-                name: token.name,
-                description: context.l10n.failedToLoadDescription,
-                marketCapRank: null,
-              ),
+              data: TokenDetails(name: token.name),
             ),
             success: (data) => TokenDetailsWidget(data: data),
           );
@@ -184,41 +151,39 @@ class _Balance extends StatelessWidget {
     final Amount cryptoAmount = context.watchUserCryptoBalance(token);
     final Amount? fiatAmount = context.watchUserFiatBalance(token);
 
-    if (cryptoAmount.value != 0 && fiatAmount != null) {
-      return CpContentPadding(
-        bottom: false,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          width: double.infinity,
-          decoration: const ShapeDecoration(
-            shape: StadiumBorder(),
-            color: CpColors.darkBackgroundColor,
-          ),
-          child: Wrap(
-            alignment: WrapAlignment.center,
-            spacing: 16,
-            children: [
-              PriceWidget(
-                label: context.l10n.youOwn,
-                amount: cryptoAmount.format(
-                  DeviceLocale.localeOf(context),
-                  roundInteger: true,
-                ),
+    return cryptoAmount.value != 0 && fiatAmount != null
+        ? CpContentPadding(
+            bottom: false,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              width: double.infinity,
+              decoration: const ShapeDecoration(
+                shape: StadiumBorder(),
+                color: CpColors.darkBackgroundColor,
               ),
-              PriceWidget(
-                label: context.l10n.balance,
-                amount: fiatAmount.format(
-                  DeviceLocale.localeOf(context),
-                  roundInteger: true,
-                ),
+              child: Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 16,
+                children: [
+                  PriceWidget(
+                    label: context.l10n.youOwn,
+                    amount: cryptoAmount.format(
+                      DeviceLocale.localeOf(context),
+                      roundInteger: true,
+                    ),
+                  ),
+                  PriceWidget(
+                    label: context.l10n.balance,
+                    amount: fiatAmount.format(
+                      DeviceLocale.localeOf(context),
+                      roundInteger: true,
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return const SizedBox.shrink();
+            ),
+          )
+        : const SizedBox.shrink();
   }
 }
 
@@ -236,7 +201,7 @@ class __ChartState extends State<_Chart> {
 
   @override
   Widget build(BuildContext context) {
-    final fiatCurrency = context.read<UserPreferences>().fiatCurrency;
+    final fiatCurrency = context.watch<UserPreferences>().fiatCurrency;
     final price = _selected?.price.toString().let(Decimal.parse);
     final currentPrice = price.formatDisplayablePrice(
       locale: DeviceLocale.localeOf(context),
@@ -271,14 +236,14 @@ class __ChartState extends State<_Chart> {
 }
 
 class _RampButtons extends StatelessWidget {
-  const _RampButtons({Key? key}) : super(key: key);
+  const _RampButtons();
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
+  Widget build(BuildContext context) => const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 24),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: const [
+          children: [
             AddCashButton(),
             SizedBox(width: 24),
             CashOutButton(),
@@ -287,9 +252,28 @@ class _RampButtons extends StatelessWidget {
       );
 }
 
+class _NoGlowList extends StatelessWidget {
+  const _NoGlowList({
+    required this.child,
+  });
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) =>
+      NotificationListener<OverscrollIndicatorNotification>(
+        onNotification: (OverscrollIndicatorNotification overscroll) {
+          overscroll.disallowIndicator();
+
+          return true;
+        },
+        child: child,
+      );
+}
+
 extension on Token {
   /// Since buy and sell a token actually swaps it for USDC, makes no sense
   /// buying or selling USDC through this same flow as would not exist a match.
-  bool get canBeSwapped =>
-      address != coingeckoId && address != Token.usdc.address;
+  bool get shouldShowExchangeButtons =>
+      canBeSwapped && address != Token.usdc.address;
 }

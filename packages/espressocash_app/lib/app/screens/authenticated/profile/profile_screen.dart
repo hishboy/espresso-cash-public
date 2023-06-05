@@ -1,11 +1,12 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:auto_route/auto_route.dart';
+import 'package:barcode_widget/barcode_widget.dart';
 import 'package:dfunc/dfunc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 import 'package:solana/solana.dart';
 
 import '../../../../core/accounts/bl/account.dart';
@@ -14,18 +15,14 @@ import '../../../../features/qr_scanner/models/qr_address_data.dart';
 import '../../../../gen/assets.gen.dart';
 import '../../../../ui/icon_button.dart';
 import '../../../../ui/user_avatar.dart';
-import 'components/about_section.dart';
+import 'components/learning_section.dart';
 import 'components/profile_section.dart';
 import 'components/security_section.dart';
 
-class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({Key? key}) : super(key: key);
+@RoutePage()
+class ProfileScreen extends StatelessWidget {
+  const ProfileScreen({super.key});
 
-  @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
-}
-
-class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<MyAccount>();
@@ -37,8 +34,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       body: Material(
         color: const Color(0xffF4F4F4),
         child: SafeArea(
-          bottom: false,
-          maintainBottomViewPadding: false,
+          maintainBottomViewPadding: true,
           child: SingleChildScrollView(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -92,16 +88,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ],
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 16,
-                    horizontal: 24,
-                  ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16, horizontal: 24),
                   child: Column(
-                    children: const [
+                    children: [
                       EditProfileSection(),
                       SecuritySection(),
-                      AboutSection(),
+                      LearningSection(),
                       DangerSection(),
                       ShareSection(),
                       VersionSection(),
@@ -122,10 +115,9 @@ const double _imageSize = 88;
 
 class _QrCodeWidget extends StatelessWidget {
   const _QrCodeWidget({
-    Key? key,
     required this.address,
     required this.name,
-  }) : super(key: key);
+  });
 
   final Ed25519HDPublicKey address;
   final String name;
@@ -147,16 +139,20 @@ class _QrCodeWidget extends StatelessWidget {
         ),
         child: Row(
           children: [
-            QrImage(data: qrData, padding: EdgeInsets.zero),
-            Flexible(
-              child: Padding(
-                padding: const EdgeInsets.only(left: 24),
-                child: Text(
-                  address.toBase58(),
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
+            Expanded(
+              child: BarcodeWidget(
+                barcode: Barcode.qrCode(),
+                data: qrData,
+                padding: EdgeInsets.zero,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                address.toBase58(),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ),

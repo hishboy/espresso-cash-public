@@ -1,3 +1,4 @@
+import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -10,8 +11,9 @@ import '../bl/sign_in_bloc.dart';
 import 'components/mnemonic_input_formatter.dart';
 import 'sign_in_flow_screen.dart';
 
+@RoutePage()
 class RestoreAccountScreen extends StatefulWidget {
-  const RestoreAccountScreen({Key? key}) : super(key: key);
+  const RestoreAccountScreen({super.key});
 
   @override
   State<RestoreAccountScreen> createState() => _RestoreAccountScreenState();
@@ -24,7 +26,7 @@ class _RestoreAccountScreenState extends State<RestoreAccountScreen> {
   void _restoreAccount() {
     context
         .read<SignInBloc>()
-        .add(SignInEvent.phraseUpdated(_controller.text.trim()));
+        .add(SignInEvent.existingLocalWalletRequested(_controller.text.trim()));
     context.signInRouter.onMnemonicConfirmed();
   }
 
@@ -43,8 +45,8 @@ class _RestoreAccountScreenState extends State<RestoreAccountScreen> {
 
   @override
   void dispose() {
-    super.dispose();
     _controller.dispose();
+    super.dispose();
   }
 
   @override

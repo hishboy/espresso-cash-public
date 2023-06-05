@@ -1,18 +1,19 @@
-import 'dart:typed_data';
-
+import 'package:flutter/foundation.dart';
 import 'package:solana/solana.dart';
 import 'package:solana_seed_vault/solana_seed_vault.dart';
 
 abstract class ECWallet {
+  const ECWallet();
+
   String get address;
 
   Ed25519HDPublicKey get publicKey;
 
-  Future<Signature> sign(Iterable<int> data);
+  Future<List<Signature>> sign(Iterable<Uint8List> payloads);
 }
 
 class LocalWallet implements ECWallet {
-  LocalWallet(this.keyPair);
+  const LocalWallet(this.keyPair);
 
   final Ed25519HDKeyPair keyPair;
 
@@ -23,11 +24,12 @@ class LocalWallet implements ECWallet {
   Ed25519HDPublicKey get publicKey => keyPair.publicKey;
 
   @override
-  Future<Signature> sign(Iterable<int> data) => keyPair.sign(data);
+  Future<List<Signature>> sign(Iterable<Uint8List> payloads) =>
+      Future.wait(payloads.map(keyPair.sign));
 }
 
 class SagaWallet implements ECWallet {
-  SagaWallet(this.account, this.token);
+  const SagaWallet(this.account, this.token);
 
   final Account account;
   final AuthToken token;
@@ -39,17 +41,21 @@ class SagaWallet implements ECWallet {
   Ed25519HDPublicKey get publicKey => Ed25519HDPublicKey(account.publicKeyRaw);
 
   @override
-  Future<Signature> sign(Iterable<int> data) async {
-    final response = await SeedVault.instance.signTransactions(
+  Future<List<Signature>> sign(Iterable<Uint8List> payloads) async {
+    final responses = await SeedVault.instance.signTransactions(
       authToken: token,
-      signingRequests: [
-        SigningRequest(
-          payload: Uint8List.fromList(data.toList()),
-          requestedSignatures: [account.derivationPath],
-        ),
-      ],
+      signingRequests: payloads
+          .map(
+            (it) => SigningRequest(
+              payload: it,
+              requestedSignatures: [account.derivationPath],
+            ),
+          )
+          .toList(),
     );
 
-    return Signature(response.first.signatures.first, publicKey: publicKey);
+    return responses
+        .map((it) => Signature(it.signatures.first, publicKey: publicKey))
+        .toList();
   }
 }

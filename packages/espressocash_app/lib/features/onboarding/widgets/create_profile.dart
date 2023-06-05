@@ -8,13 +8,14 @@ import '../../../../../ui/onboarding_screen.dart';
 import '../../../../../ui/profile_image_picker/pick_profile_picture.dart';
 import '../../../../../ui/text_field.dart';
 import '../../../../../ui/theme.dart';
+import '../../../ui/back_button.dart';
 
 class CreateProfile extends StatefulWidget {
   const CreateProfile({
-    Key? key,
+    super.key,
     required this.onSubmitted,
     required this.onBackButtonPressed,
-  }) : super(key: key);
+  });
 
   final void Function(String value, File? photo) onSubmitted;
   final VoidCallback onBackButtonPressed;
@@ -52,7 +53,9 @@ class _CreateProfileState extends State<CreateProfile> {
               onPressed: _isValid ? _handleSubmitted : null,
             ),
             children: [
-              CpAppBar(),
+              CpAppBar(
+                leading: CpBackButton(onPressed: widget.onBackButtonPressed),
+              ),
               ProfileImagePicker(
                 photo: _photo,
                 label: context.l10n.uploadPhoto,
